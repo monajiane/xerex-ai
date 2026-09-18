@@ -1,0 +1,53 @@
+[project]
+name = "xerex-ai-backend"
+version = "0.1.0"
+description = "Xerex AI — self-hosted AI management platform (API, admin API, provider gateway foundation)."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Proprietary" }
+
+dependencies = [
+    "fastapi>=0.115,<1.0",
+    "uvicorn[standard]>=0.30",
+    "pydantic[email]>=2.8,<3.0",
+    "pydantic-settings>=2.4",
+    "sqlalchemy[asyncio]>=2.0.30,<3.0",
+    "alembic>=1.13",
+    "asyncpg>=0.29",
+    "aiosqlite>=0.20",
+    "redis>=5.0",
+    "pyjwt>=2.9",
+    "argon2-cffi>=23.1",
+    "cryptography>=43.0",
+    "httpx>=0.27",
+    "python-multipart>=0.0.9",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.2",
+    "pytest-asyncio>=0.23",
+    "ruff>=0.6",
+    "pgserver>=0.1",   # embedded PostgreSQL for sandbox/dev (no Docker required)
+    "redislite>=6.2",  # embedded Redis for sandbox/dev (no Docker required)
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "C4", "SIM", "ASYNC"]
+ignore = ["B008"]  # FastAPI dependency defaults are idiomatic
