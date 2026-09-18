@@ -1,0 +1,41 @@
+# ---------------------------------------------------------------------------
+# Xerex AI
+# ---------------------------------------------------------------------------
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+*.pem
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+venv-dev/
+backend/.venv/
+
+# Node
+node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/coverage/
+*.tsbuildinfo
+
+# Local dev state (embedded postgres / redis data, logs)
+.devdata/
+*.log
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
