@@ -154,6 +154,7 @@ enforced by tooling rather than by review alone.
 | RTL layout | `npm run test` | No physical direction utilities anywhere in the source |
 | Dates/numbers | `npm run test` | Jalali formatting, Persian digits, ISO-8601 for exports |
 | No hard-coded copy | `npm run lint` | Every user-visible string comes from the i18n layer |
+| Error copy | `npm run test` | API codes render as Persian sentences with the raw code in an LTR badge |
 | Smoke test | `npm run test` | Persian sign-in, first-run setup and dashboard render in RTL |
 
 ---
@@ -230,8 +231,9 @@ make typecheck    # tsc --noEmit
 
 * Backend: 38 tests — auth flows, RBAC, settings validation, audit trail, health
   probes, security primitives, configuration contract, dashboard honesty.
-* Frontend: i18n parity, glossary, bidi/RTL guarantees, Jalali formatting, API client
-  contract, status badges and an end-to-end render smoke test.
+* Frontend: 38 tests — i18n parity, glossary, bidi/RTL guarantees, Jalali formatting,
+  API client contract, status badges, Persian error copy and an end-to-end render
+  smoke test (sign-in, first-run setup, authenticated dashboard).
 * CI (`.github/workflows/ci.yml`) runs everything, including the Alembic
   upgrade/downgrade round-trip against PostgreSQL.
 

@@ -3,8 +3,6 @@
  * (PROMPT.md 14.8). The English enum value from the API is translated through the
  * `enums` namespace.
  */
-import { useTranslation } from "react-i18next";
-
 import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { Ltr } from "@/components/common/Ltr";
 import { useDynamicTranslation } from "@/i18n/dynamic";
@@ -44,7 +42,6 @@ export function StatusBadge({
   className,
   showRawValue = false,
 }: StatusBadgeProps) {
-  useTranslation("enums");
   const enums = useDynamicTranslation("enums");
   const label = enums.t(`${domain}.${value}`, { defaultValue: value });
   const tone = TONES[value] ?? "neutral";
