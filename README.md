@@ -1,63 +1,203 @@
 # Xerex AI
 
+[![License](https://img.shields.io/badge/license-Proprietary-blue)]()
+[![Milestone](https://img.shields.io/badge/milestone-M7-green)]()
+[![Backend](https://img.shields.io/badge/backend-FastAPI-blue)]()
+[![Frontend](https://img.shields.io/badge/frontend-React%20%2B%20TypeScript%20%2B%20Vite-purple)]()
+[![Database](https://img.shields.io/badge/database-PostgreSQL%20%2B%20Redis-blue)]()
+[![Language](https://img.shields.io/badge/language-English%2FPersian-informational)]()
+
 Self-hosted AI management platform: a unified LLM gateway plus an enterprise-grade
-administration panel.
-
-> **Language contract — non-negotiable**
->
-> | Surface | Language | Direction |
-> | --- | --- | --- |
-> | Admin panel (the product administrators see) | **Persian (فارسی)** | **RTL** |
-> | Secondary panel language | English | LTR |
-> | API, database, source code, identifiers, logs, commits | English | — |
->
-> The panel is not a translated English product: it is Persian-first and RTL-native.
-> The backend is English-native: `provider_id`, `model_endpoint`, `api_key_id` and
-> every other identifier stay English in code and in JSON, while the administrator
-> sees **«ارائه‌دهنده»**, **«نقطه اتصال مدل»** and **«شناسه کلید API»**.
-> See [`PROMPT.md`](./PROMPT.md) for the full specification (section 14 covers the
-> Persian/RTL requirements).
+administration panel. **Persian-first, RTL-native** admin panel with full English API.
 
 ---
 
-## Current status — milestone M7
+## ✨ Features
 
-The full-stack foundation is in place (authentication, the database schema for every
-planned module, a Persian-first admin shell), **M2** adds the provider and credential
-modules (registration, encrypted keys, verification, connectivity tests) and **M3**
-adds the model registry, «کشف مدل‌ها» discovery and the «آزمایش مدل» playground, and
-**M4** opens the public gateway (OpenAI-compatible `/v1`) and the «کلیدهای API»
-administration that protects it, **M5** adds the routing engine with its dry-run
-simulator plus scheduled upstream health checks, **M6** closes the data loop with the
-«مصرف» analytics screens, the «گزارش درخواست‌ها» request log and CSV/JSON exports, and
-**M7** hardens the result: per-module code splitting, a modal focus contract, demo seed
-data, index tuning for the analytics queries and the operations guide.
+- **Unified LLM Gateway** — OpenAI-compatible `/v1` endpoint for all providers
+- **Provider Management** — Register, verify, and manage any LLM provider with encrypted credentials
+- **Model Discovery & Playground** — Auto-discover models from providers, test with JSON/SSE streaming
+- **Smart Routing Engine** — Weighted routing, dry-run simulator, per-model endpoints
+- **API Key Management** — Issue, revoke, and rate-limit downstream API keys
+- **Usage Analytics** — Real-time dashboards, request logs, CSV/JSON exports
+- **Health Monitoring** — Per-dimension health checks with scheduled probes
+- **RBAC Admin Panel** — Persian RTL panel with `owner`, `admin`, `operator`, `viewer` roles
+- **Audit Trail** — Every administrative mutation logged with actor, IP, and request ID
+- **First-Run Bootstrap** — Secure one-time owner account creation
+- **Production-Ready Security** — Config validation, secret redaction, trusted-proxy handling
 
-| Area | State |
+---
+
+## 📋 Table of Contents
+
+- [Quick Start](#quick-start)
+- [Architecture](#architecture)
+- [API Reference](#api-reference)
+- [Persian / RTL Implementation](#persian--rtl-implementation)
+- [Database](#database)
+- [Testing](#testing)
+- [Security](#security)
+- [Roadmap](#roadmap)
+- [Contributing](#contributing)
+- [License](#license)
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+| Requirement | Version |
 | --- | --- |
-| API runtime (FastAPI, versioning, structured logging, error envelope) | ✅ implemented |
-| PostgreSQL schema + Alembic migration (`0001_initial_schema`) | ✅ implemented |
-| Redis foundation (health, rate limiting, graceful degradation) | ✅ implemented |
-| Authentication (bootstrap, login, refresh rotation, roles, audit) | ✅ implemented |
-| System health, dashboard aggregates, settings, admin users, audit log | ✅ implemented |
-| Admin panel shell, i18n (fa default, en secondary), Persian typography, RTL | ✅ implemented |
-| Production configuration validation, secret redaction, trusted-proxy handling | ✅ implemented |
-| Providers & credentials (CRUD, encrypted secrets, verification, connectivity test) | ✅ implemented |
-| Models, discovery and the model playground (M3) | ✅ implemented |
-| API keys and the public gateway (M4) | ✅ implemented |
-| Routing engine, simulator and health checks (M5) | ✅ implemented |
-| Usage analytics, request logs and exports (M6) | ✅ implemented |
-| Hardening: lazy routes, focus contract, seeds, indexes, ops docs (M7) | ✅ implemented |
-
-Nothing is **faked**: every module of `PROMPT.md` section 5 now renders a real screen
-backed by real rows, and `GET /api/v1/system/roadmap` reports each one with
-`state: "implemented"` and the endpoint that serves it. Empty states say what is
-missing instead of inventing traffic — the dashboard and the usage screens read the
-database, so they show zeros until a provider and a request exist.
+| Python | 3.11+ |
+| Node.js | 18+ |
+| PostgreSQL | 14+ |
+| Redis | 7+ |
+| Docker & Compose | *(optional — for container deployment)* |
 
 ---
 
-## Repository layout
+### Option A — Docker Compose ⭐ (recommended)
+
+```bash
+git clone https://github.com/monajiane/xerex-ai.git
+cd xerex-ai
+cp .env.example .env
+# Edit .env — set the four required values below
+docker compose up --build -d
+```
+
+**Required environment variables:**
+
+| Variable | Purpose | Example |
+| --- | --- | --- |
+| `XEREX_SECRET_KEY` | JWT signing key (≥ 32 chars) | `python3 -c "import secrets; print(secrets.token_urlsafe(48))"` |
+| `XEREX_CREDENTIALS_ENCRYPTION_KEY` | AES-256 key (32 bytes base64) | `python3 -c "import base64,os; print(base64.urlsafe_b64encode(os.urandom(32)).decode())"` |
+| `POSTGRES_PASSWORD` | Database password | *(any strong password)* |
+| `REDIS_PASSWORD` | Redis password | *(any strong password)* |
+
+| URL | Description |
+| --- | --- |
+| http://localhost:8080 | Admin panel |
+| http://localhost:8000/docs | API documentation |
+| http://localhost:8000/health | Health check |
+
+**First run:** Set `XEREX_BOOTSTRAP_ENABLED=true` to enable the Persian first-run setup screen.
+After creating the owner account, set it to `false`.
+
+**Development with containers** (ports bound to `127.0.0.1` only):
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yaml up --build -d
+```
+
+---
+
+### Option B — Local development (no Docker)
+
+```bash
+# Create virtual environment and install Python dependencies
+python3 -m venv ~/.local/state/xerex-dev/venv
+source ~/.local/state/xerex-dev/venv/bin/activate
+pip install -e "backend[dev]"
+
+# Install frontend dependencies
+cd frontend && npm install && cd ..
+
+# Start embedded PostgreSQL + Redis
+python scripts/dev_services.py start
+
+# Generate .env with secrets
+python -c "import secrets,base64,os; f=open('.env','w'); f.write(f'XEREX_SECRET_KEY={secrets.token_urlsafe(48)}\nXEREX_CREDENTIALS_ENCRYPTION_KEY={base64.urlsafe_b64encode(os.urandom(32)).decode()}\nXEREX_BOOTSTRAP_ENABLED=true\nXEREX_ENVIRONMENT=development\n')"
+
+# Set the database URL to use the embedded services
+echo 'XEREX_DATABASE_URL=postgresql+asyncpg://postgres@/xerex?host='$(python -c "import os;print(os.path.expanduser('~/.local/state/xerex-dev/pgdata'))") >> .env
+echo 'XEREX_REDIS_URL=redis://127.0.0.1:56379/0' >> .env
+
+# Run database migrations
+cd backend && python -m alembic upgrade head
+
+# Run the API server
+make api    # → http://localhost:8000
+
+# In another terminal, run the frontend
+cd frontend && npm run dev    # → http://localhost:5173
+```
+
+> **Note:** `scripts/dev_services.py` uses `pgserver` and `redislite` wheels. These require
+> Linux. On Windows or when they fail, use SQLite instead by setting:
+> ```env
+> XEREX_DATABASE_URL=sqlite+aiosqlite:///./xerex.db
+> XEREX_REDIS_REQUIRED=false
+> ```
+
+---
+
+### Option C — Manual installation
+
+```bash
+# 1. Install PostgreSQL & Redis
+sudo apt install -y postgresql redis-server
+sudo systemctl enable --now postgresql redis-server
+
+# 2. Create database
+sudo -u postgres psql -c "CREATE DATABASE xerex;"
+sudo -u postgres psql -c "CREATE USER xerex WITH PASSWORD 'your_password';"
+sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE xerex TO xerex;"
+
+# 3. Install Python dependencies
+python3 -m venv venv
+source venv/bin/activate
+pip install -e "backend[dev]"
+
+# 4. Install Node.js dependencies
+cd frontend && npm install && cd ..
+
+# 5. Configure .env
+cp .env.example .env
+nano .env
+
+# 6. Run migrations
+cd backend && python -m alembic upgrade head
+
+# 7. Start services
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --no-proxy-headers
+cd frontend && npm run dev
+```
+
+---
+
+## 🏗️ Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                      Client Browser                      │
+│              (React + TypeScript + Vite)                 │
+│                  http://localhost:5173                   │
+│                    Persian RTL Panel                     │
+└──────────────────────┬──────────────────────────────────┘
+                       │ /api/v1/...
+                       ▼
+┌─────────────────────────────────────────────────────────┐
+│                  FastAPI Backend                          │
+│                    http://localhost:8000                  │
+│                                                          │
+│  ┌──────────┐ ┌───────────┐ ┌──────────┐ ┌───────────┐  │
+│  │  Auth     │ │ Providers │ │  Models   │ │  API Keys │  │
+│  │  Bootstrap │ │  Registry │ │  Catalog  │ │  Gateway  │  │
+│  └──────────┘ └───────────┘ └──────────┘ └───────────┘  │
+│  ┌──────────┐ ┌───────────┐ ┌──────────┐ ┌───────────┐  │
+│  │  Routing  │ │ Usage     │ │  Health   │ │  Settings │  │
+│  │  Engine   │ │ Analytics │ │  Checks   │ │  Admin    │  │
+│  └──────────┘ └───────────┘ └──────────┘ └───────────┘  │
+│                                                          │
+│  ┌───────────────────────────────────────────────────┐   │
+│  │  Database (PostgreSQL) │ Cache (Redis)              │   │
+│  │  Alembic Migrations  │ Rate Limiting               │   │
+│  └───────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Repository layout
 
 ```text
 backend/                  FastAPI service (English identifiers, English API)
@@ -94,110 +234,7 @@ PROMPT.md                 the master build prompt
 
 ---
 
-## Quick start
-
-### Option A — Docker Compose (reference deployment)
-
-```bash
-cp .env.example .env          # then set the four required values
-docker compose up --build
-```
-
-`docker-compose.yml` refuses to start without them (that is deliberate):
-
-| Variable | Purpose |
-| --- | --- |
-| `XEREX_SECRET_KEY` | JWT signing key (≥ 32 random characters) |
-| `XEREX_CREDENTIALS_ENCRYPTION_KEY` | 32 bytes of url-safe base64 (or 64 hex chars) that encrypt provider credentials |
-| `POSTGRES_PASSWORD` / `REDIS_PASSWORD` | database and cache credentials |
-
-* Admin panel → <http://localhost:8080>
-* API docs (development only) → <http://localhost:8000/docs>
-
-On first start set `XEREX_BOOTSTRAP_ENABLED=true` for one boot: the panel shows the
-Persian **«راه‌اندازی اولیه»** screen, you create the owner account and you are signed
-in. Bootstrap is off by default everywhere else — production never silently allows
-first-run account creation.
-
-**Local development with containers** (database and cache ports bound to
-`127.0.0.1`, development secrets, bootstrap allowed):
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.dev.yaml up --build
-```
-
-### Option B — local development without Docker
-
-The repository ships `scripts/dev_services.py`, which boots a real PostgreSQL and a
-real Redis from the `pgserver` / `redislite` wheels — no container runtime needed.
-
-```bash
-make install              # Python venv (~/.local/state/xerex-dev/venv) + npm packages
-make env                  # creates .env with generated secrets
-make services-up          # embedded PostgreSQL + Redis
-make migrate              # alembic upgrade head
-make api                  # API on http://localhost:8000
-make web                  # panel on http://localhost:5173 (proxies /api to the API)
-```
-
-`make help` lists every target (tests, lint, build, migrations, service control).
-
-Browser code only ever calls relative URLs (`/api/v1/...`). In development Vite
-proxies them to `127.0.0.1:8000`; in production nginx does the same. That keeps
-cookies, CORS and preview hosts simple.
-
----
-
-## Persian / RTL implementation notes
-
-The panel is built for Persian users first; the rules live in `PROMPT.md` §14 and are
-enforced by tooling rather than by review alone.
-
-* **Document root** — `<html lang="fa" dir="rtl">` in `index.html`, re-synchronised
-  by the i18n layer whenever the language changes.
-* **Typography** — self-hosted **Vazirmatn Variable** (`@fontsource-variable/vazirmatn`),
-  weights 100–900, `line-height: 1.75` for body text, no letter-spacing, no italics.
-* **Localization architecture** — every visible string lives in
-  `frontend/src/i18n/fa.ts`; `en.ts` is typed as the same shape, so a missing or
-  misspelled key is a **TypeScript error**. Each top-level section is an i18next
-  namespace (`dashboard`, `health`, `errors`, …). Adding a language = adding one file.
-* **No literal UI text** — `eslint-plugin-i18next` fails the build on a hard-coded
-  string in JSX (`npm run lint`).
-* **LTR isolation islands** — `<Ltr>` and `<CodeBlock>` apply
-  `direction: ltr; unicode-bidi: isolate|isolate-override` so API keys, ids, JSON,
-  URLs, model names, IPs and logs stay readable inside Persian sentences and never
-  reorder the words around them.
-* **Jalali calendar** — dates use `fa-IR-u-ca-persian`
-  («۲۷ شهریور ۱۴۰۵»), relative times use `Intl.RelativeTimeFormat('fa-IR')`
-  («۳ دقیقه پیش»). Exports and API payloads always use Latin digits and ISO-8601.
-* **Numerals** — Persian digits for presentation (configurable), **Latin digits
-  always** for technical values.
-* **Logical CSS only** — Tailwind logical utilities (`ms-`, `me-`, `ps-`, `pe-`,
-  `start-`, `end-`, `text-start`); a test scans the source and fails on `ml-`, `pr-`,
-  `left-`, `text-right`, …
-* **Status is never colour alone** — every badge pairs colour with Persian text.
-* **Directional icons are mirrored, others are not.**
-* **Mixed Persian/English** — `Gemini`, `DeepSeek`, `OpenAI`, `Claude`, `Qwen`,
-  `Redis`, `PostgreSQL`, `HTTP 429`, `JSON` stay in Latin script inside LTR islands.
-
-### Verification in CI
-
-| Check | Command | What it guarantees |
-| --- | --- | --- |
-| i18n parity | `npm run test` | `fa` and `en` key sets are identical; Persian is default/fallback |
-| Glossary | `npm run test` | Approved terminology (ارائه‌دهنده، مدل‌ها، …) and no Finglish |
-| Bidi safety | `npm run test` | Technical values are isolated; API keys survive inside Persian text |
-| RTL layout | `npm run test` | No physical direction utilities anywhere in the source |
-| Dates/numbers | `npm run test` | Jalali formatting, Persian digits, ISO-8601 for exports |
-| No hard-coded copy | `npm run lint` | Every user-visible string comes from the i18n layer |
-| Error copy | `npm run test` | API codes render as Persian sentences with the raw code in an LTR badge |
-| Smoke test | `npm run test` | Persian sign-in, first-run setup, disabled setup and dashboard render in RTL |
-| Production config | `pytest tests/test_config_security.py` | Unsafe secrets/keys/bootstrap settings stop startup |
-| Compose posture | `make compose-check` | No public database ports, internal data network, mandatory Redis auth |
-
----
-
-## API at a glance
+## 📡 API Reference
 
 All responses are English and machine-readable. Errors use one envelope:
 
@@ -211,8 +248,7 @@ All responses are English and machine-readable. Errors use one envelope:
 }
 ```
 
-The panel maps `error.code` to a Persian message; the raw code stays visible in an
-LTR badge next to the message so it can be quoted in a report.
+### Core Endpoints
 
 | Method | Path | Purpose |
 | --- | --- | --- |
@@ -229,257 +265,234 @@ LTR badge next to the message so it can be quoted in a report.
 | `GET` | `/api/v1/system/roadmap` | Planned modules and their API contracts |
 | `GET` | `/api/v1/dashboard/summary` | KPI aggregates, provider health, top models |
 | `GET` | `/api/v1/admin-users` · `POST` · `PATCH /{id}` | Administrator management (RBAC) |
-| `GET` | `/api/v1/settings` · `PUT /{key}` | Platform settings (locale, numerals, theme, retention) |
+| `GET` | `/api/v1/settings` · `PUT /{key}` | Platform settings |
 | `GET` | `/api/v1/audit-logs` | Administrative audit trail |
-| `GET` | `/api/v1/catalog/providers` | Supported provider kinds (metadata only) |
-| `GET` | `/api/v1/catalog/routing-strategies` | Routing strategies (metadata only) |
-| `GET`·`POST` | `/api/v1/providers` · `GET`·`PATCH`·`DELETE /providers/{provider_id}` | Provider registry (RBAC) |
-| `POST` | `/api/v1/providers/{provider_id}/test` | Connectivity test («آزمایش اتصال») |
+
+### Providers & Credentials (M2)
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET`·`POST` | `/api/v1/providers` · `GET`·`PATCH`·`DELETE /providers/{provider_id}` | Provider registry |
+| `POST` | `/api/v1/providers/{provider_id}/test` | Connectivity test |
 | `GET`·`POST` | `/api/v1/providers/{provider_id}/credentials` | Credentials — encrypted, masked on read |
 | `POST` | `…/credentials/{credential_id}/rotate` · `/verify` | Key rotation and verification |
+| `GET` | `/api/v1/catalog/providers` | Supported provider kinds (metadata) |
+
+### Models (M3)
+
+| Method | Path | Purpose |
+| --- | --- | --- |
 | `GET`·`POST` | `/api/v1/models` · `GET`·`PATCH`·`DELETE /models/{model_id}` | Model registry |
-| `POST` | `/api/v1/models/discover` | «کشف مدل‌ها» — reconcile the provider catalogue |
+| `POST` | `/api/v1/models/discover` | Model discovery |
 | `POST` | `/api/v1/models/{model_id}/test` · `/test/stream` | Playground (JSON and SSE) |
-| `GET`·`POST` | `/api/v1/models/{model_id}/endpoints` | «نقاط اتصال مدل» with credential binding |
+| `GET`·`POST` | `/api/v1/models/{model_id}/endpoints` | Endpoints with credential binding |
+| `GET` | `/api/v1/catalog/routing-strategies` | Routing strategies (metadata) |
+
+### API Keys & Gateway (M4)
+
+| Method | Path | Purpose |
+| --- | --- | --- |
 | `POST` | `/api/v1/api-keys` · `POST …/{id}/revoke` | Issue and revoke downstream keys |
 | `POST` | `/v1/chat/completions` · `/v1/completions` · `/v1/embeddings` | Public gateway (OpenAI-compatible) |
 | `GET` | `/v1/models` · `/v1/info` | Public catalogue and key introspection |
-| `POST` | `/api/v1/routing/simulate` | Dry-run the routing decision with reasons |
+
+### Routing (M5)
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `POST` | `/api/v1/routing/simulate` | Dry-run routing decision with reasons |
 | `GET`·`POST` | `/api/v1/routing/rules` | Routing rules (strategy, conditions, priority) |
+| `POST` | `/api/v1/health/checks` | Probe all providers now |
 | `GET` | `/api/v1/health/providers` · `/health/observations` | Observed upstream health |
-| `POST` | `/api/v1/health/checks` | «اجرای بررسی» — probe the providers now |
 
-Full reference: [`docs/api.md`](./docs/api.md).
+### Usage & Analytics (M6)
 
-**Auth model** — short-lived access JWT (15 min) returned in the body and kept in
-memory by the panel; refresh token (14 days) in an `HttpOnly`, `SameSite=Lax` cookie,
-rotated on every use and stored hashed. Roles: `owner`, `admin`, `operator`, `viewer`,
-enforced server-side.
-
----
-
-## Architecture notes (pre-M2 correction pass)
-
-The gateway is built in milestones; these structures exist now so later milestones
-add behaviour instead of reshaping the schema.
-
-**Endpoint ↔ provider ↔ credential.** A routing decision picks all four
-independently: `ModelEndpoint.credential_id` binds an endpoint to a specific
-credential, `ModelEndpoint.provider_id` optionally overrides the model's home
-provider, and `None` keeps the simple case (the provider's default credential). One
-provider can have many credentials, several endpoints can share one credential row
-across providers, and secrets are never duplicated:
-
-```text
-Model A
-  Endpoint 1 → Provider X → Credential 1
-  Endpoint 2 → Provider X → Credential 2
-  Endpoint 3 → Provider Y → Credential 1
-```
-
-`app/services/providers.py` exposes the resolution rule (`pick_credential`, a pure
-function, plus `list_routing_targets`) without contacting any upstream provider.
-
-**Health is tracked per dimension.** `health_checks` keeps the portable
-`target_type`/`target_id` pointer *and* typed, indexed foreign keys to provider,
-credential, model and endpoint, so provider X can be healthy while credential 1 is
-`rate_limited`, credential 2 is healthy and one endpoint is degraded. No scheduler
-is implemented yet — `app/health/targets.py` is the write path the workers will use.
-
-**One request, many attempts.** `client_requests` holds one row per downstream
-request (requested model, attempt count, final outcome, aggregate tokens/cost),
-while `usage_records` holds one row per upstream *attempt* (provider, credential,
-model, endpoint, tokens, cost, error, retryable) — including several attempts with
-the same client request id, which is why that column is no longer unique. Tokens
-and cost are therefore attributable per attempt and per request.
-
-**Rate limiting is policy driven.** `RateLimitScope` names the dimension (login
-today; api key, administrator, IP, provider, credential, endpoint, model and plan
-in M4) and `RateLimitPolicy` carries the numbers, so the login limiter and the
-future gateway limiter share the engine but never their configuration or state.
-`GatewayRateLimiter` is an honest placeholder that raises `not_implemented`.
-
-## Database
-
-`0001_initial_schema` creates the full schema so later milestones add behaviour, not
-tables: `admin_users`, `refresh_tokens`, `providers`, `provider_credentials`, `models`,
-`model_endpoints`, `api_keys`, `usage_records`, `usage_daily_rollups`, `routing_rules`,
-`health_checks`, `audit_logs`, `settings`.
-`0002_routing_targets_usage` adds the pre-M2 structure: endpoint credential/provider
-binding, typed health targets and `client_requests` with per-attempt usage columns.
-It is additive — existing rows stay valid — and every new column is either nullable
-or given a temporary server default that is dropped again in the same migration.
-
-Everything is English, snake_case, UTC, and portable enum values (`openai`, `owner`,
-`healthy`). Migrations are reversible:
-
-```bash
-cd backend && alembic upgrade head && alembic downgrade base
-```
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/v1/usage` | Usage analytics screen |
+| `GET` | `/api/v1/logs` | Request logs |
+| — | Export | CSV/JSON exports |
 
 ---
 
-## Testing
+## 🌐 Persian / RTL Implementation
+
+The admin panel is **Persian-first and RTL-native**. Rules are enforced by tooling.
+
+### Typography
+- **Vazirmatn Variable** (`@fontsource-variable/vazirmatn`) — weights 100–900
+- `line-height: 1.75` for body text, no letter-spacing, no italics
+
+### Localization Architecture
+- Every visible string lives in `frontend/src/i18n/fa.ts`
+- `en.ts` is typed as the same shape — missing key = **TypeScript error**
+- Each section is an i18next namespace (`dashboard`, `health`, `errors`, …)
+- Adding a language = adding one file
+
+### Rules
+- **No literal UI text** — `eslint-plugin-i18next` fails build on hard-coded strings
+- **LTR isolation islands** — `<Ltr>` and `<CodeBlock>` keep API keys, IDs, JSON readable inside Persian text
+- **Jalali calendar** — `fa-IR-u-ca-persian` («۲۷ شهریور ۱۴۰۵»), relative times (`Intl.RelativeTimeFormat`)
+- **Logical CSS only** — Tailwind logical utilities (`ms-`, `me-`, `ps-`, `pe-`, `start-`, `end-`, `text-start`)
+- **Status never colour alone** — every badge pairs colour with Persian text
+- **Technical values always Latin digits** (`API 429`, `JSON`, `HTTP 500`)
+
+### Verification in CI
+
+| Check | Command | Guarantees |
+| --- | --- | --- |
+| i18n parity | `npm run test` | `fa` and `en` keys identical; Persian is default/fallback |
+| Glossary | `npm run test` | Approved terminology, no Finglish |
+| Bidi safety | `npm run test` | Technical values isolated inside Persian text |
+| RTL layout | `npm run test` | No physical direction utilities in source |
+| Dates/numbers | `npm run test` | Jalali formatting, Persian digits, ISO-8601 exports |
+| No hard-coded copy | `npm run lint` | Every user-visible string from i18n layer |
+| Error copy | `npm run test` | API codes as Persian sentences with raw code in LTR badge |
+| Smoke test | `npm run test` | Sign-in, first-run setup, dashboard render in RTL |
+| Production config | `pytest tests/test_config_security.py` | Unsafe secrets/keys/bootstrap stop startup |
+| Compose posture | `make compose-check` | No public DB ports, internal network, mandatory Redis auth |
+
+---
+
+## 🗄️ Database
+
+`0001_initial_schema` creates the full schema: `admin_users`, `refresh_tokens`, `providers`,
+`provider_credentials`, `models`, `model_endpoints`, `api_keys`, `usage_records`,
+`usage_daily_rollups`, `routing_rules`, `health_checks`, `audit_logs`, `settings`.
+
+`0002_routing_targets_usage` adds pre-M2 structure with typed health targets and
+per-attempt usage columns.
 
 ```bash
-make test         # backend (pytest) + frontend (vitest)
-make lint         # ruff + eslint (includes the i18n guard)
-make typecheck    # tsc --noEmit
+# Apply migrations
+cd backend && alembic upgrade head
 
-# backend only, the way CI runs it (from the backend directory)
+# Rollback
+cd backend && alembic downgrade base
+```
+
+Everything is English, snake_case, UTC, and portable enum values (`openai`, `owner`, `healthy`).
+
+---
+
+## 🧪 Testing
+
+```bash
+make test          # backend (pytest) + frontend (vitest)
+make lint          # ruff + eslint (includes the i18n guard)
+make typecheck     # tsc --noEmit
+make format        # ruff format
+
+# Backend only
 cd backend && pytest -q
+
+# Frontend only
+cd frontend && npm run test
 ```
 
-`backend/tests` is a package (`backend/tests/__init__.py`): the test modules import
-shared helpers with absolute imports (`from tests.conftest import ...`), which resolve
-only while `backend/` is on `sys.path`. That is true for `python -m pytest` but *not*
-for the `pytest` console script, which is what CI runs — without the marker, collection
-fails with `ModuleNotFoundError: No module named 'tests'`.
+**Backend:** 138 tests — auth flows, bootstrap gating, config validation, trusted-proxy
+resolution, RBAC, secret redaction, endpoint↔credential resolution, health probes,
+security primitives, compose posture.
 
-* Backend: 138 tests (136 without a PostgreSQL URL; the migration round-trip tests
-  skip) — auth flows and bootstrap gating, production configuration
-  validation, trusted-proxy address resolution, RBAC/self-escalation, secret
-  redaction in logs and audit storage, endpoint↔credential resolution, typed health
-  targets, client-request/attempt separation, the rate-limit abstraction, compose
-  posture, health probes, security primitives, configuration contract.
-* Frontend: 40 tests — i18n parity, glossary, bidi/RTL guarantees, Jalali formatting,
-  API client contract, status badges, Persian error copy and an end-to-end render
-  smoke test (sign-in, first-run setup, disabled setup, authenticated dashboard).
-* CI (`.github/workflows/ci.yml`) runs everything, including the Alembic
-  upgrade/downgrade round-trip against PostgreSQL.
+**Frontend:** 40 tests — i18n parity, glossary, bidi/RTL guarantees, Jalali formatting,
+API client contract, status badges, Persian error copy, end-to-end render smoke test.
 
 ---
 
-## Security notes
+## 🔒 Security
 
-### Startup configuration validation
+### Startup Validation (`XEREX_ENVIRONMENT=staging|production`)
 
-`XEREX_ENVIRONMENT=staging|production` makes the API validate its own configuration
-while the application is created and **refuse to start** instead of running
-insecurely. Blocking conditions:
-
-| Condition | Why |
+| Blocking Condition | Why |
 | --- | --- |
-| `XEREX_SECRET_KEY` missing | no silently generated signing key outside development/test |
-| `XEREX_SECRET_KEY` short, placeholder (`change-me-in-production`), low entropy | those values end up in repositories |
-| `XEREX_CREDENTIALS_ENCRYPTION_KEY` missing | provider secrets must not be protected by a key derived from the JWT secret |
-| encryption key malformed (not 32 base64 bytes / 64 hex) | a typo must not silently weaken AES-GCM |
-| encryption key equal to the JWT secret | one leaked value would compromise both |
-| `XEREX_CORS_ORIGINS` containing `*` | cookies are sent with credentials |
-| invalid `XEREX_TRUSTED_PROXIES` entries | a typo must not widen the trust boundary |
+| `XEREX_SECRET_KEY` missing | No silently generated signing key in production |
+| `XEREX_SECRET_KEY` short/placeholder/low entropy | Would end up in repositories |
+| `XEREX_CREDENTIALS_ENCRYPTION_KEY` missing | Provider secrets need dedicated encryption |
+| Encryption key malformed | Typo must not silently weaken AES-GCM |
+| Encryption key = JWT secret | One leak compromises both |
+| `XEREX_CORS_ORIGINS` contains `*` | Cookies sent with credentials |
+| Invalid `XEREX_TRUSTED_PROXIES` | Typo widens trust boundary |
 
-Everything else is reported as a startup **warning**: bootstrap explicitly enabled,
-Redis without authentication, no trusted proxies configured, `XEREX_DEBUG=true`.
+### Key Guarantees
 
-### First-run bootstrap
-
-* Only possible while **zero** administrators exist.
-* `XEREX_BOOTSTRAP_ENABLED` decides: explicit `true`/`false` always wins, unset means
-  *enabled in development/test, disabled in staging/production*.
-* `GET /api/v1/auth/bootstrap-status` returns `bootstrap_allowed`
-  (`requires_bootstrap && bootstrap_enabled`) — the value the panel acts on.
-* After the first owner exists, bootstrap answers `409 bootstrap_closed`; when the
-  switch is off it answers `403 bootstrap_disabled`.
-
-### Provider credential encryption
-
-AES-256-GCM with `XEREX_CREDENTIALS_ENCRYPTION_KEY`. Plaintext is never returned by
-the API (the read contract exposes only a masked `key_hint`).
-
-**Rotation is documented but not implemented.** Ciphertexts are self-contained
-(`nonce || ciphertext`), so a maintenance task can decrypt existing
-`provider_credentials` rows with the old key and re-encrypt them with the new one —
-one transaction per row, no other table involved. Until a key-version column exists,
-rotation is an offline operation: enter maintenance, re-encrypt, swap the key,
-restart. `app/core/crypto.py::key_fingerprint()` is logged at startup (a truncated
-hash, never the key) so an operator can confirm which key is active.
-
-### Client address behind proxies
-
-`X-Forwarded-For` is honoured **only** when the direct peer is listed in
-`XEREX_TRUSTED_PROXIES`. A direct client cannot spoof its address by sending the
-header; behind a reverse proxy the chain is walked right-to-left to the first
-untrusted hop. The resolved address is what audit records and the login limiter use.
-
-The trust decision belongs to the application, so uvicorn is started with
-`--no-proxy-headers` (Dockerfile, `make dev`) — otherwise uvicorn would replace the
-peer address with the header value before the check runs. Verified end to end: with
-`XEREX_TRUSTED_PROXIES` empty, `POST /auth/login` carrying
-`X-Forwarded-For: 203.0.113.9` is audited as `127.0.0.1`; with `127.0.0.0/8` listed it
-is audited as `203.0.113.9`.
-
-In `docker-compose.yml` exactly one peer is trusted: the panel container
-(`172.28.0.10`, fixed through the `edge` network's IPAM block), which is the only
-process that appends the real client address. Traffic that reaches the published API
-port without going through nginx carries the bridge gateway as its peer, so its
-`X-Forwarded-For` is ignored. Deploying behind another proxy means adding its address
-(or CIDR) to `XEREX_TRUSTED_PROXIES`.
-
-### Other guarantees
-
-* Argon2id password hashing; JWT HS256 with issuer and type validation.
-* Refresh tokens are stored hashed, are single-use (rotated on every refresh) and
-  live in an `HttpOnly`, `SameSite=Lax` cookie (`Secure` in production).
-* Downstream API keys are stored hashed and shown once, with a `xrx_live_…` prefix hint.
-* Secrets are never logged: log payloads and audit `diff` mappings pass through a
-  recursive redactor (`app/core/redaction.py`).
-* RBAC is enforced server-side; an administrator cannot create an owner, promote
-  anybody to owner, or change their own role.
-* Login is rate limited (Redis); the limiter fails **open** unless
-  `XEREX_REDIS_REQUIRED=true`, in which case the request fails with
-  `dependency_unavailable` rather than losing protection silently.
-* Redis authentication comes from `XEREX_REDIS_PASSWORD` (or credentials inside
-  `XEREX_REDIS_URL`); the application injects them into the URL and no password is
-  ever committed.
-* Every administrative mutation writes an `audit_logs` row with the actor, IP and
-  request id.
-* `XEREX_ENVIRONMENT=production` disables interactive docs and enables secure
-  cookies; run behind TLS.
-
-### Container posture
-
-`docker-compose.yml` (production posture):
-
-* PostgreSQL and Redis publish **no** ports;
-* they live on an `internal: true` network with no route to the outside world;
-* only the API (`:8000`) and the nginx-served panel (`:8080`) are reachable;
-* the API trusts forwarded headers from the panel container only, and never from
-  uvicorn itself (`--no-proxy-headers`), so direct API clients cannot spoof their IP;
-* Redis requires a password supplied through the environment;
-* the API receives the database credentials through the environment, never inside a
-  connection-string URL.
-
-The development override (`docker-compose.dev.yaml`) binds the data ports to
-`127.0.0.1` only, so a developer keeps `psql`/`redis-cli` access without exposing
-anything. `make compose-check` validates these properties without Docker;
-`make compose-config` renders the merged files (requires Docker, also run in CI).
+- **Argon2id** password hashing; **JWT HS256** with issuer and type validation
+- **Refresh tokens**: hashed, single-use (rotated on every refresh), `HttpOnly` + `SameSite=Lax` cookie
+- **Downstream API keys**: stored hashed, shown once with `xrx_live_…` prefix hint
+- **Secrets**: never logged — recursive redactor (`app/core/redaction.py`)
+- **RBAC**: server-side enforced; cannot create owner, promote to owner, or change own role
+- **Rate limiting**: Redis-based; fails **open** unless `XEREX_REDIS_REQUIRED=true`
+- **Audit trail**: every mutation logged with actor, IP, and request ID
+- **Proxy handling**: `X-Forwarded-For` honored only for trusted peers; uvicorn runs with `--no-proxy-headers`
 
 ---
 
-## Roadmap
+## 📈 Roadmap
 
-| Milestone | Scope |
-| --- | --- |
-| **M1** ✅ | Foundation: config, database, Redis, auth, health, Persian RTL shell |
-| **M2** ✅ | Providers & credentials: CRUD, encrypted secrets, verification, connectivity test |
-| **M3** ✅ | Models: discovery, pricing, capabilities, model playground |
-| **M4** ✅ | API keys and the OpenAI-compatible public gateway |
-| **M5** ✅ | Routing engine, dry-run simulator and scheduled health checks |
-| **M6** ✅ | Usage analytics, request logs, exports and daily rollups |
-| **M7** ✅ | Hardening: performance, accessibility, RTL audit, documentation, seed data |
+| Milestone | Scope | Status |
+| --- | --- | --- |
+| **M1** | Foundation: config, database, Redis, auth, health, Persian RTL shell | ✅ |
+| **M2** | Providers & credentials: CRUD, encrypted secrets, verification, connectivity test | ✅ |
+| **M3** | Models: discovery, pricing, capabilities, model playground | ✅ |
+| **M4** | API keys and the OpenAI-compatible public gateway | ✅ |
+| **M5** | Routing engine, dry-run simulator, scheduled health checks | ✅ |
+| **M6** | Usage analytics, request logs, exports and daily rollups | ✅ |
+| **M7** | Hardening: code splitting, modal focus, seed data, index tuning, ops docs | ✅ |
 
 ---
 
-## Local sandbox account
+## 🤝 Contributing
 
-A development database created by the instructions above contains one owner account so
-the panel can be explored immediately:
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+### Development workflow
+
+```bash
+# Backend
+cd backend
+source venv/bin/activate
+pip install -e "backend[dev]"
+python -m alembic upgrade head
+python -m pytest -q
+
+# Frontend
+cd frontend
+npm install
+npm run dev
+npm run test
+npm run lint
+npm run typecheck
+```
+
+---
+
+## 📄 License
+
+This project is proprietary. See the [LICENSE](LICENSE) file for details.
+
+---
+
+## 📬 Support
+
+- **Documentation:** `docs/api.md`, `docs/operations.md`, `docs/accessibility.md`
+- **Full spec:** `PROMPT.md` (master build prompt)
+- **Issues:** [GitHub Issues](https://github.com/monajiane/xerex-ai/issues)
+- **Email:** admin@xerex.ai
+
+---
+
+## 🏪 Local Sandbox Account
+
+A development database contains one owner account for immediate exploration:
 
 ```text
 email:    admin@xerex.ai
 password: xerex-dev-admin-2026
 ```
 
-This exists **only** in local development databases. Delete the database (or change the
-password) before deploying anywhere reachable; production deployments always start with
-the Persian first-run screen and no accounts.
+> ⚠️ **This exists only in local development databases.** Delete the database (or change
+> the password) before deploying anywhere reachable. Production deployments always start
+> with the Persian first-run screen and no accounts.
