@@ -1,0 +1,79 @@
+Xerex AI — complete project, milestones M1 → M7
+================================================================
+
+Head commit : 63d41af chore(repo): ignore the downloadable artifacts directory (2026-09-19)
+Branch      : arena/01a0b526-xerex-ai
+Files       : 235
+
+Commit history (oldest → newest)
+----------------------------------------------------------------
+  67edf30  fix: make backend tests importable as a package
+  0c8c618  feat(m2-m4): providers, models and the public gateway
+  2589964  docs: M4 gateway and API key reference
+  5a72649  feat(routing,health): M5 routing engine, simulator and scheduled checks
+  c59b542  feat(usage): M6 usage analytics, request logs and exports
+  11bbb37  chore(hardening): M7 performance, accessibility, seeds and documentation
+  4123b17  chore(config): report milestone M7
+  63d41af  chore(repo): ignore the downloadable artifacts directory
+
+Contents
+----------------------------------------------------------------
+  (root files)/  — 8 files
+      .env.example
+      .gitignore
+      MANIFEST.txt
+      Makefile
+      PROMPT.md
+      README.md
+      … and 2 more
+  .github/  — 1 files
+      workflows/ci.yml
+  backend/  — 126 files
+      Dockerfile
+      alembic/env.py
+      alembic/script.py.mako
+      alembic/versions/0001_initial_schema.py
+      alembic/versions/0002_routing_targets_usage.py
+      alembic/versions/0003_performance_indexes.py
+      … and 120 more
+  docs/  — 4 files
+      accessibility.md
+      api.md
+      operations.md
+      pre-m2-corrections.md
+  frontend/  — 95 files
+      Dockerfile
+      eslint.config.js
+      index.html
+      nginx.conf
+      package-lock.json
+      package.json
+      … and 89 more
+  scripts/  — 1 files
+      dev_services.py
+
+What is included
+----------------------------------------------------------------
+  M1  foundation: config, PostgreSQL schema, Redis, auth, health, Persian RTL shell
+  M2  providers & credentials: CRUD, encrypted secrets, verification, connectivity test
+  M3  models: discovery, pricing, capabilities, playground
+  M4  API keys and the OpenAI-compatible public gateway (/v1)
+  M5  routing engine, dry-run simulator, scheduled upstream health checks
+  M6  usage analytics, request logs, CSV/JSON export, daily rollups
+  M7  hardening: code splitting, focus contract, performance indexes, seeds, docs
+
+Deliberately not included
+----------------------------------------------------------------
+  .env (secrets)          — copy .env.example and fill in the two keys
+  node_modules/, dist/    — run `npm install` / `npm run build`
+  local database data     — create it with `alembic upgrade head`
+
+Run it
+----------------------------------------------------------------
+  backend :  cd backend  && pip install -e . && alembic upgrade head
+             uvicorn app.main:app --reload
+  frontend:  cd frontend && npm install && npm run dev   (proxies /api to :8000)
+  demo data: cd backend  && python -m app.seeds           (opt-in, rows marked (demo))
+  tests   :  cd backend  && pytest       |  cd frontend && npm test
+
+Read next: README.md, docs/operations.md, docs/accessibility.md, docs/api.md

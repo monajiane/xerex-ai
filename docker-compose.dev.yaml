@@ -1,0 +1,42 @@
+# Xerex AI — local development override.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yaml up
+#
+# What this changes (and nothing else):
+#   * PostgreSQL and Redis publish their ports on 127.0.0.1 only, so a developer can
+#     attach psql / redis-cli or a GUI client from the host;
+#   * Redis uses a fixed development password and the API receives it through
+#     XEREX_REDIS_PASSWORD (never in a committed connection string);
+#   * the API runs in development mode: generated secrets, docs enabled, first-run
+#     bootstrap allowed, human-readable logs.
+#
+# The security-relevant parts of the base file (no public database ports, internal
+# data network, mandatory secrets in production) stay in place.
+name: xerex-ai
+
+services:
+  postgres:
+    environment:
+      POSTGRES_PASSWORD: xerex-dev-postgres
+    ports:
+      # Bound to localhost: not reachable from the network.
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+
+  redis:
+    command: ["redis-server", "--requirepass", "xerex-dev-redis", "--save", "", "--appendonly", "no"]
+    environment:
+      REDIS_PASSWORD: xerex-dev-redis
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+
+  api:
+    environment:
+      XEREX_ENVIRONMENT: development
+      XEREX_DEBUG: "true"
+      XEREX_LOG_JSON: "false"
+      XEREX_SECRET_KEY: ${XEREX_SECRET_KEY:-xerex-dev-secret-key-not-for-production}
+      XEREX_CREDENTIALS_ENCRYPTION_KEY: ${XEREX_CREDENTIALS_ENCRYPTION_KEY:-}
+      XEREX_BOOTSTRAP_ENABLED: "true"
+      XEREX_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-xerex}:xerex-dev-postgres@postgres:5432/${POSTGRES_DB:-xerex}
+      XEREX_REDIS_PASSWORD: xerex-dev-redis
+      XEREX_CORS_ORIGINS: '["http://localhost:5173","http://127.0.0.1:5173","http://localhost:8080"]'

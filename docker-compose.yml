@@ -1,0 +1,137 @@
+# Xerex AI — reference deployment (secure by default).
+#
+#   cp .env.example .env      # then fill in secrets and passwords
+#   docker compose up --build
+#
+# Admin panel: http://localhost:8080  ·  API: http://localhost:8000/docs
+#
+# Network posture
+# ---------------
+#   edge  — public entry point: the nginx-served panel and the API. The panel keeps
+#           the fixed address 172.28.0.10; the API trusts exactly that peer for
+#           X-Forwarded-For, so direct clients to the API port cannot spoof their IP.
+#   data  — internal network without external connectivity: PostgreSQL, Redis and
+#           the API. Neither database nor cache publishes a port to the host, so a
+#           misconfigured firewall cannot expose them, and they cannot reach the
+#           internet either.
+#
+# For local development with database/cache ports bound to localhost, layer the
+# override instead of editing this file:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yaml up
+name: xerex-ai
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-xerex}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-xerex}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    # No published ports: reachable from the API over the internal network only.
+    expose:
+      - "5432"
+    networks:
+      - data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-xerex}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    # Authentication is mandatory here: the password comes from the environment and
+    # is never committed. ``--save "" --appendonly no`` keeps M1 stateless (rate
+    # limit counters do not need persistence).
+    command:
+      [
+        "redis-server",
+        "--requirepass",
+        "${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}",
+        "--save",
+        "",
+        "--appendonly",
+        "no",
+      ]
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}
+    expose:
+      - "6379"
+    networks:
+      - data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" --no-auth-warning ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ./backend
+    environment:
+      XEREX_ENVIRONMENT: ${XEREX_ENVIRONMENT:-production}
+      XEREX_DEBUG: "false"
+      XEREX_LOG_JSON: "true"
+      XEREX_SECRET_KEY: ${XEREX_SECRET_KEY:?set XEREX_SECRET_KEY in .env}
+      XEREX_CREDENTIALS_ENCRYPTION_KEY: ${XEREX_CREDENTIALS_ENCRYPTION_KEY:?set XEREX_CREDENTIALS_ENCRYPTION_KEY in .env}
+      # First-run setup stays off unless it is explicitly enabled for the first boot.
+      XEREX_BOOTSTRAP_ENABLED: ${XEREX_BOOTSTRAP_ENABLED:-false}
+      XEREX_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-xerex}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-xerex}
+      # No credentials inside the URL: the password is injected from the environment.
+      XEREX_REDIS_URL: redis://redis:6379/0
+      XEREX_REDIS_PASSWORD: ${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}
+      XEREX_REDIS_REQUIRED: ${XEREX_REDIS_REQUIRED:-false}
+      # The panel reaches the API through nginx, which is what puts the real client
+      # address into X-Forwarded-For. Only that one container is trusted, so a client
+      # talking to the published API port directly cannot spoof its address — the API
+      # is not the nginx container and its X-Forwarded-For header is ignored
+      # (see app/auth/dependencies.py and XEREX_TRUSTED_PROXIES in .env.example).
+      XEREX_TRUSTED_PROXIES: ${XEREX_TRUSTED_PROXIES:-["172.28.0.10"]}
+      XEREX_CORS_ORIGINS: ${XEREX_CORS_ORIGINS:-["http://localhost:8080"]}
+      XEREX_DEFAULT_LOCALE: fa
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "${API_PORT:-8000}:8000"
+    networks:
+      - edge
+      - data
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./frontend
+    depends_on:
+      - api
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    networks:
+      edge:
+        # Fixed address: it is the only peer the API treats as a trusted proxy, so
+        # it must not change between restarts. Override XEREX_TRUSTED_PROXIES when
+        # another reverse proxy sits in front of this stack.
+        ipv4_address: 172.28.0.10
+    restart: unless-stopped
+
+networks:
+  edge:
+    # Explicit subnet so the panel keeps a predictable address for the API's trusted
+    # proxy list (see the web service above).
+    ipam:
+      config:
+        - subnet: 172.28.0.0/24
+  data:
+    # No route to the outside world: the database and cache are unreachable even
+    # from a compromised neighbouring container.
+    internal: true
+
+volumes:
+  postgres-data:
